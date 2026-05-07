@@ -1,11 +1,11 @@
 INI_BYT_TIP = 0
-TAM_BYT_TIP = 2 # 0: indefinido 1: heartbeat 2: msg 3: pedido/voto
+TAM_BYT_TIP = 1 # 0: indefinido 1: heartbeat 2: msg 3: pedido/voto
 INI_BYT_TXT = INI_BYT_TIP + TAM_BYT_TIP
 TAM_BYT_TXT = 5 # 5 chars
 INI_BYT_TRM = INI_BYT_TXT + TAM_BYT_TXT
 TAM_BYT_TRM = 4 # 1 int do termo atual
 INI_BYT_CMT = INI_BYT_TRM + TAM_BYT_TRM
-TAM_BYT_CMT = 1 # flag de commit ou n commit
+TAM_BYT_CMT = 1 # flag de commit ou n commit 0 : False 1: True
 INI_BYT_IDT = INI_BYT_CMT + TAM_BYT_CMT
 TAM_BYT_IDT = 4 # 1 int, id atual da sequencia de palavras
 
@@ -33,6 +33,12 @@ def pacote_para_string(pacote):
 	for c in pacote:
 		resultado += str(c)
 	return str(resultado)
+
+T_IN = 0
+T_HB = 1
+T_MS = 2
+T_PV = 3
+T_VT = 4
 
 def escreve_tipo(msg, tipo):
 	msg[INI_BYT_TIP : (INI_BYT_TIP + TAM_BYT_TIP)] = str_para_chars(tipo, TAM_BYT_TIP)

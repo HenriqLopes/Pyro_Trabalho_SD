@@ -3,6 +3,7 @@ import threading
 import time
 
 import defs
+import prot
 
 #coisas que vai ter que saber
 #N_PROCESSOS pra usar maioria e fors
@@ -13,40 +14,41 @@ import defs
 class processo:
 	def __init__ (self, id, buffer, arquivo, termo, lider, timer, tempo_hb):
 		self.buffer = buffer
+		self.id_atual = 0
 		self.id = id
 		self.arquivo = arquivo
 		self.termo = termo
 		self.lider = lider
-		self.timer = timer
+		self.timer = timer #rand()
 		self.tempo_hb = tempo_hb
 
 		self.link_dns = Pyro5.api.locate_ns()
 
-		for i in range(defs.n):
+		for i in range(defs.N_PROC):
 			self.lista_proxys.append(Pyro5.api.Proxy(defs.uri[i]))
 
 	def constroi_pacote_hb(self):
-		
-		return
+		pacote = prot.inic_pacote()
+		prot.escreve_tipo(pacote, prot.T_HB)
+		prot.escreve_termo(self.termo)
+		return pacote
 	
 	def constroi_pacote_pedido_voto(self):
-
+		pacote = prot.inic_pacote()
+		prot.escreve_tipo(pacote, prot.T_PV)
+		prot.escreve_id_atual(pacote, self.id)
+		prot.escreve_termo(self.termo)
 		return
 
 	def send_pacote(self, pacote, proxy_destino):
-		
+		???
 		return
 
 	def recebe_hb(self,):
 
 		return
 	
-	#{
-	def recebe_pacote(self):
-		#recebe os heart beats e os carai
-		return
-	
-	thread = threading.Thread(target=recebe_pacote()) # 1. Create the thread
+	'''thread = threading.Thread(target=recebe_pacote()) # 1. Create the thread
 
 	thread.start() # 2. Start the thread
 
@@ -54,7 +56,7 @@ class processo:
 
 	thread.join() # 4. Wait for the thread to finish
 	print("Thread has finished!")
-
+	'''
 	#thread de manutenção do hb
 	def heart_beat(self):
 		if (self.lider):
@@ -81,20 +83,63 @@ class processo:
 		# avisa todo mundo pra atualizarem seus termos
 
 	#chamada quando alguem pede seu voto
-	def pesquisa_eleitoral(self,pacote):
+	def pesquisa_eleitoral(self, pacote):
 		if (self.termo <= prot.le_termo(pacote)):
 			return True
 		else:
 			self.inicia_eleicao()
 			return False
-		
+	
 	# chamada quando virar o novo lider
-	def se_registra_como_lider(self,id):
-		self.link_dns.register("lider", defs.uri[id])  #se coloca no DNS
+	def registra_como_lider(self):
+		self.link_dns.register("lider", defs.uri[self.id])  #se coloca no DNS
+		self.lider = True
+		self.termo += 1
 		self.heart_beat() #avisa todo mundo pra atualizar o termo
 
 
-daemon = Pyro5.api.Daemon(50712)             # make a Pyro daemon
+#ARRUMAR
+	@Pyro5.api.expose
+	def recebe_pacote(self, pacote):
+		tipo = prot.le_tipo(pacote)
+		# Heartbeat
+		if (tipo == prot.T_HB):
+			self.tempo_hb = time()
+			self.votos = 0
+		
+		# Mensagem
+		elif (tipo == prot.T_MS):
+			if (prot.le_commit(pacote) == 0):
+				if (id_pc - self.id_atual == 1):
+					add_info(prot.le_texto(pacote))
+
+			elif (prot.le_commit(pacote) == 1):
+				id_pc = prot.le_id_atual(pacote)
+				if(id_pc == self.id_atual):
+					commit()
+				elif (id_pc - self.id_atual == 1): 
+					add_info(prot.le_texto(pacote))
+					commit()
+				#else: 
+					#reporta erro
+		
+		# Pedido de Voto
+		elif (tipo == prot.T_PV):
+			if (self.pesquisa_eleitoral(pacote)):
+				prot.escreve_tipo(pacote, prot.T_VT)
+				self.lista_proxys[prot.le_id_atual(pacote)].recebe_pacote(pacote)
+
+		# Recebe Voto
+		elif (tipo == prot.T_VT):
+			self.votos += 1
+			if (self.votos > (defs.N_PROC - self.termo) // 2):
+				self.registra_como_lider()
+
+
+		return
+
+
+daemon = Pyro5.api.Daemon()             # make a Pyro daemon
 uri = daemon.register(processo, "processo1")
 
 print("Ready. Object uri =", uri)       # print the uri so we can use it in the client later
