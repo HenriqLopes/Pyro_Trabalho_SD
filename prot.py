@@ -41,9 +41,9 @@ T_PV = 3
 T_VT = 4
 
 def escreve_tipo(msg, tipo):
-	msg[INI_BYT_TIP : (INI_BYT_TIP + TAM_BYT_TIP)] = str_para_chars(tipo, TAM_BYT_TIP)
+	msg[INI_BYT_TIP : (INI_BYT_TIP + TAM_BYT_TIP)] = int_para_chars(tipo, TAM_BYT_TIP)
 def le_tipo(msg):
-	return chars_para_str(msg[INI_BYT_TIP : (INI_BYT_TIP + TAM_BYT_TIP)])
+	return chars_para_int(msg[INI_BYT_TIP : (INI_BYT_TIP + TAM_BYT_TIP)])
 
 def escreve_texto(msg, texto):
 	msg[INI_BYT_TXT : (INI_BYT_TXT + TAM_BYT_TXT)] = str_para_chars(texto, TAM_BYT_TXT)

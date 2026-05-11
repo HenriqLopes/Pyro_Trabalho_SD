@@ -7,9 +7,9 @@ import defs
 import prot
 
 ID = defs.P0
-ARQUIVO = 'seg1.txt'
+ARQUIVO = 'seg0.txt'
 LIDER = False
-SEED = 1234
+SEED = 1235
 #coisas que vai ter que saber
 #N_PROCESSOS pra usar maioria e fors
 # IP/AQUELE BAGUI LA DE ASSINATURA de cada um dos processos (isso vai pra um arq separado se pa)
@@ -29,32 +29,33 @@ class processo:
 
 		random.seed(SEED)
 		self.timer = random.randint(150, 300)
-		self.tempo_hb = time()
+		self.tempo_hb = time.time()
 
 		self.link_dns = Pyro5.api.locate_ns()
 		if (self.lider == False):
 			uri_lid = self.link_dns.lookup(defs.NS_LIDER)
 			self.proxy_lider = Pyro5.api.Proxy(uri_lid)
 
+		self.lista_proxys = []
 		for i in range(defs.N_PROC):
-			self.lista_proxys.append(Pyro5.api.Proxy(defs.uri[i]))
+			self.lista_proxys.append(Pyro5.api.Proxy(defs.URI[i]))
 
 	def constroi_pacote_hb(self):
 		pacote = prot.inic_pacote()
 		prot.escreve_tipo(pacote, prot.T_HB)
-		prot.escreve_termo(self.termo)
+		prot.escreve_termo(pacote, self.termo)
 		return pacote
 	def constroi_pacote_pedido_voto(self):
 		pacote = prot.inic_pacote()
 		prot.escreve_tipo(pacote, prot.T_PV)
 		prot.escreve_id_atual(pacote, self.id)
-		prot.escreve_termo(self.termo)
+		prot.escreve_termo(pacote, self.termo)
 		return pacote
 	def constroi_pacote_msg(self, texto):
 		pacote = prot.inic_pacote()
 		prot.escreve_tipo(pacote, prot.T_MS)
 		prot.escreve_id_atual(pacote, self.id_atual)
-		prot.escreve_termo(self.termo)
+		prot.escreve_termo(pacote, self.termo)
 		prot.escreve_texto(pacote, texto)
 		return pacote
 
@@ -77,7 +78,7 @@ class processo:
 		self.id_atual  -= 1
 
 	def recebe_hb(self, pacote):
-		self.tempo_hb = time()
+		self.tempo_hb = time.time()
 		self.votos = 0
 		return
 	def recebe_msg(self, pacote):
@@ -112,14 +113,14 @@ class processo:
 	def heart_beat(self):
 		lid = self.lider
 		while (lid == self.lider):
-			sleep(100) #ms
+			#time.sleep(0.1) #s
 
 			if (self.lider):
 				pacote = self.constroi_pacote_hb()
 				for s in self.lista_proxys:
 					self.send_pacote(pacote, s)
 			else:
-				if(self.timer < (time() - self.tempo_hb)):
+				if(self.timer < (time.time() - self.tempo_hb)):
 					self.inicia_eleicao()
 
 	#chamada quando o timer do hb da pau
@@ -136,11 +137,11 @@ class processo:
 			return False
 	# chamada quando virar o novo lider
 	def registra_como_lider(self):
-		self.link_dns.register(defs.NS_LIDER, defs.uri[self.id])  #se coloca no DNS
+		self.link_dns.register(defs.NS_LIDER, defs.URI[self.id])  #se coloca no DNS
 		self.lider = True
 		self.termo += 1
 
-		thread = threading.Thread(target=self.heart_beat()) # 1. Create the thread
+		thread = threading.Thread(target=self.heart_beat) # 1. Create the thread
 		thread.start() # 2. Start the thread
 
 	@Pyro5.api.expose
@@ -148,22 +149,22 @@ class processo:
 		tipo = prot.le_tipo(pacote)
 		# Heartbeat
 		if (tipo == prot.T_HB):
-			thread = threading.Thread(target=self.recebe_hb(pacote)) # 1. Create the thread
+			thread = threading.Thread(target=self.recebe_hb, args=(pacote)) # 1. Create the thread
 			thread.start() # 2. Start the thread	
 		
 		# Mensagem
 		elif (tipo == prot.T_MS):
-			thread = threading.Thread(target=self.recebe_msg(pacote)) # 1. Create the thread
+			thread = threading.Thread(target=self.recebe_msg, args=(pacote)) # 1. Create the thread
 			thread.start() # 2. Start the thread
 		
 		# Pedido de Voto
 		elif (tipo == prot.T_PV):
-			thread = threading.Thread(target=self.recebe_pvt(pacote)) # 1. Create the thread
+			thread = threading.Thread(target=self.recebe_pvt, args=(pacote)) # 1. Create the thread
 			thread.start() # 2. Start the thread
 
 		# Recebe Voto
 		elif (tipo == prot.T_VT):
-			thread = threading.Thread(target=self.recebe_vt(pacote)) # 1. Create the thread
+			thread = threading.Thread(target=self.recebe_vt, args=(pacote)) # 1. Create the thread
 			thread.start() # 2. Start the thread
 
 		return
@@ -191,7 +192,7 @@ class processo:
 		self.buffer = texto
 		self.id_atual += 1
 
-		thread = threading.Thread(target=self.recebe_do_cliente(texto)) # 1. Create the thread
+		thread = threading.Thread(target=self.recebe_do_cliente, args=(texto)) # 1. Create the thread
 		thread.start() # 2. Start the thread
 
 		return
@@ -202,7 +203,7 @@ class processo:
 		#cria 2 threads
 		
 		# uma fica conferindo heatbeat e timer e intenção de voto
-		thread = threading.Thread(target=self.heart_beat()) # 1. Create the thread
+		thread = threading.Thread(target=self.heart_beat) # 1. Create the thread
 		thread.start() # 2. Start the thread
 
 		# a outra fica recebendo info e commit
