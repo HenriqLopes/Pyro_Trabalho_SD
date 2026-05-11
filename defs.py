@@ -2,6 +2,8 @@
 uri = daemon.register(processo, nome)   
 '''
 
+NS_LIDER = 'lider'
+
 N_PROC = 4
 
 P0 = 0
