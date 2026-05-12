@@ -53,8 +53,23 @@ class Processo:
 		return pacote
 
 	def send_pacote(self, pacote, uri):
+
+		#TODO AJEITAR ESSA PORRA PRA MANDAR CADA PACOTE PRA DEVIDA FUNCAO DE UMA VEZ POR TODAS
+
+		if uri not in self.lista_URIS:
+			return
+		
 		proxy = Pyro5.api.Proxy(uri)
 		proxy.recebe_pacote(pacote)
+		try:
+			proxy = Pyro5.api.Proxy(uri)
+			proxy.recebe_pacote(pacote)
+
+		except Pyro5.errors.CommunicationError:
+			print(f"Processo {uri} caiu")
+			# remove da lista de seguidores
+			if uri in self.lista_URIS:
+				self.lista_URIS.remove(uri)
 
 	#chamada quando o processo ta normal , cliente mandou um char
 	def add_info(self, texto):
@@ -71,6 +86,7 @@ class Processo:
 		#atualiza o buffer temporario (não commitado) copiando o buffer real
 		self.id_atual  -= 1
 
+	#TODO EXPOSE NESSAS PORRA DESSAS FUNCAO
 	def recebe_hb(self, pacote):
 
 		term_lid = prot.le_termo(pacote)
@@ -87,6 +103,7 @@ class Processo:
 	def recebe_msg(self, pacote):
 		#msg padrao
 		prot.print_pacote(pacote)
+		id_pc = prot.le_id_atual(pacote)
 
 		if (prot.le_commit(pacote) == 0):
 			if (id_pc - self.id_atual == 1):
@@ -98,7 +115,6 @@ class Processo:
 
 		#pediu pra commitar
 		elif (prot.le_commit(pacote) == 1):
-			id_pc = prot.le_id_atual(pacote)
 			if(id_pc == self.id_atual):
 				self.commit()
 			elif (id_pc - self.id_atual == 1): 
@@ -113,7 +129,7 @@ class Processo:
 			self.send_pacote(pacote, self.lista_URIS[prot.le_id_atual(pacote)])
 	def recebe_vt(self):
 		self.votos += 1
-		if (self.votos >= (defs.N_PROC - self.termo) // 2):
+		if (self.votos >= (defs.N_PROC) // 2):
 			self.votos = 0
 			self.registra_como_lider()
 
@@ -126,8 +142,10 @@ class Processo:
 
 			if (self.lider):
 				pacote = self.constroi_pacote_hb()
-				for s in self.lista_URIS:
-					self.send_pacote(pacote, s)
+				for uri in self.lista_URIS:
+					if (uri != defs.URI[self.id]):
+						thread = threading.Thread(target=self.send_pacote, args=(pacote, uri)) # 1. Create the thread
+						thread.start() # 2. Start the thread	
 			else:
 				#print(f"{(time.time() - self.tempo_hb)}ms de {self.timer}ms")
 				if(self.timer < (time.time() - self.tempo_hb)) and (not(self.candidato)):
@@ -137,10 +155,10 @@ class Processo:
 	#chamada quando o timer do hb da pau
 	def inicia_eleicao(self):
 		pacote = self.constroi_pacote_pedido_voto()
-		for i in range(defs.N_PROC):
-			if (i != self.id):
-				self.send_pacote(pacote, self.lista_URIS[i])
-
+		for uri in self.lista_URIS:
+			if (uri != defs.URI[self.id]):
+				thread = threading.Thread(target=self.send_pacote, args=(pacote, uri)) # 1. Create the thread
+				thread.start() # 2. Start the thread	
 	#chamada quando alguem pede seu voto
 	def pesquisa_eleitoral(self, pacote):
 		if (self.termo <= prot.le_termo(pacote)):
@@ -158,6 +176,7 @@ class Processo:
 		thread = threading.Thread(target=self.heart_beat) # 1. Create the thread
 		thread.start() # 2. Start the thread
 
+	#TODO DESFAZER ESSA FEIURA TODA AQUI, PARA DE SOCAR THREAD ATÈ O CARALHO
 	#@Pyro5.api.oneway
 	@Pyro5.api.expose
 	def recebe_pacote(self, pacote):
@@ -192,9 +211,10 @@ class Processo:
 	def recebe_do_cliente(self, texto):
 
 		pacote = self.constroi_pacote_msg(texto)
-		for i in range(defs.N_PROC):
-			if (i != self.id):
-				self.send_pacote(pacote, self.lista_URIS[i])
+		for uri in self.lista_URIS:
+			if (uri != defs.URI[self.id]):
+				thread = threading.Thread(target=self.send_pacote, args=(pacote, uri)) # 1. Create the thread
+				thread.start() # 2. Start the thread	
 
 	@Pyro5.api.expose
 	def confirma_msg(self, pacote):
@@ -205,11 +225,13 @@ class Processo:
 		if (prot.le_id_atual(pacote) == self.id_atual):
 			self.votos += 1
 			#se der maioria manda commitar (== pra n ficar remandando commit)
-			if (self.votos == (defs.N_PROC - self.termo) // 2):
+			if (self.votos == (defs.N_PROC) // 2):
 				prot.escreve_commit(pacote, 1)
-				for i in range(defs.N_PROC):
-					if (i != self.id):
-						self.send_pacote(pacote, self.lista_URIS[i])
+				for uri in self.lista_URIS:
+					if (uri != defs.URI[self.id]):
+						thread = threading.Thread(target=self.send_pacote, args=(pacote, uri)) # 1. Create the thread
+						thread.start() # 2. Start the thread	
+						
 
 	@Pyro5.api.expose
 	def recebe_texto(self, texto):
