@@ -57,11 +57,8 @@ class Processo:
 		if uri not in self.lista_URIS:
 			return
 		
-		proxy = Pyro5.api.Proxy(uri)
-		proxy.recebe_pacote(pacote)
 		try:
 			proxy = Pyro5.api.Proxy(uri)
-			proxy.recebe_pacote(pacote)
 
 			tipo = prot.le_tipo(pacote)
 			# Heartbeat
@@ -162,8 +159,8 @@ class Processo:
 				pacote = self.constroi_pacote_hb()
 				for uri in self.lista_URIS:
 					if (uri != defs.URI[self.id]):
-						thread = threading.Thread(target=self.send_pacote, args=(pacote, uri)) # 1. Create the thread
-						thread.start() # 2. Start the thread	
+						self.send_pacote(pacote, uri)
+						
 			else:
 				#print(f"{(time.time() - self.tempo_hb)}ms de {self.timer}ms")
 				if(self.timer < (time.time() - self.tempo_hb)) and (not(self.candidato)):
@@ -173,6 +170,7 @@ class Processo:
 	#chamada quando o timer do hb da pau
 	def inicia_eleicao(self):
 		pacote = self.constroi_pacote_pedido_voto()
+		self.votos = 1
 		for uri in self.lista_URIS:
 			if (uri != defs.URI[self.id]):
 				thread = threading.Thread(target=self.send_pacote, args=(pacote, uri)) # 1. Create the thread
