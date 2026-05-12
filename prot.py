@@ -1,7 +1,7 @@
 INI_BYT_TIP = 0
 TAM_BYT_TIP = 1 # 0: indefinido 1: heartbeat 2: msg 3: pedido/voto
 INI_BYT_TXT = INI_BYT_TIP + TAM_BYT_TIP
-TAM_BYT_TXT = 5 # 5 chars
+TAM_BYT_TXT = 6 # 5 chars
 INI_BYT_TRM = INI_BYT_TXT + TAM_BYT_TXT
 TAM_BYT_TRM = 4 # 1 int do termo atual
 INI_BYT_CMT = INI_BYT_TRM + TAM_BYT_TRM

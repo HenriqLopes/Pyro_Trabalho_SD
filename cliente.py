@@ -14,6 +14,8 @@ def main():
 	while (1):
 		buffer = input("- ")
 		proxy_lid.recebe_texto(buffer)
+		uri_lid = link_dns.lookup(defs.NS_LIDER)
+		proxy_lid = Pyro5.api.Proxy(uri_lid)
 	
 if __name__ == '__main__':
 	main()

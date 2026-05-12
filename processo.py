@@ -117,12 +117,17 @@ class Processo:
 		#msg padrao
 		prot.print_pacote(pacote)
 		id_pc = prot.le_id_atual(pacote)
-
+		print(id_pc)
+		print(prot.le_commit(pacote))
 		if (prot.le_commit(pacote) == 0):
-			if (id_pc - self.id_atual == 1):
-				self.add_info(prot.le_texto(pacote))
-			
+			print(prot.le_texto(pacote))
+			texto = prot.le_texto(pacote)
+			print(texto)
+			self.buffer = texto
+			self.id_atual  += 1
+			print("aqui")
 			print(self.uri_lid)
+			print("aqui")
 			proxy = Pyro5.api.Proxy(self.uri_lid)
 			proxy.confirma_msg()
 
@@ -173,8 +178,7 @@ class Processo:
 		self.votos = 1
 		for uri in self.lista_URIS:
 			if (uri != defs.URI[self.id]):
-				thread = threading.Thread(target=self.send_pacote, args=(pacote, uri)) # 1. Create the thread
-				thread.start() # 2. Start the thread	
+				self.send_pacote(pacote, uri)	
 	#chamada quando alguem pede seu voto
 	def pesquisa_eleitoral(self, pacote):
 		if (self.termo <= prot.le_termo(pacote)):
@@ -247,9 +251,8 @@ class Processo:
 				prot.escreve_commit(pacote, 1)
 				for uri in self.lista_URIS:
 					if (uri != defs.URI[self.id]):
-						thread = threading.Thread(target=self.send_pacote, args=(pacote, uri)) # 1. Create the thread
-						thread.start() # 2. Start the thread	
-						
+						self.send_pacote(pacote, uri)
+
 	@Pyro5.api.expose
 	def recebe_texto(self, texto):
 		self.buffer = texto
