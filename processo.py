@@ -54,8 +54,6 @@ class Processo:
 
 	def send_pacote(self, pacote, uri):
 
-		#TODO AJEITAR ESSA PORRA PRA MANDAR CADA PACOTE PRA DEVIDA FUNCAO DE UMA VEZ POR TODAS
-
 		if uri not in self.lista_URIS:
 			return
 		
@@ -64,6 +62,23 @@ class Processo:
 		try:
 			proxy = Pyro5.api.Proxy(uri)
 			proxy.recebe_pacote(pacote)
+
+			tipo = prot.le_tipo(pacote)
+			# Heartbeat
+			if (tipo == prot.T_HB):
+				proxy.recebe_hb(pacote)
+
+			# Mensagem
+			elif (tipo == prot.T_MS):
+				proxy.recebe_msg(pacote)
+
+			# Pedido de Voto
+			elif (tipo == prot.T_PV):
+				proxy.recebe_pvt(pacote)
+				
+			# Recebe Voto
+			elif (tipo == prot.T_VT):
+				proxy.recebe_vt()
 
 		except Pyro5.errors.CommunicationError:
 			print(f"Processo {uri} caiu")
@@ -86,7 +101,7 @@ class Processo:
 		#atualiza o buffer temporario (não commitado) copiando o buffer real
 		self.id_atual  -= 1
 
-	#TODO EXPOSE NESSAS PORRA DESSAS FUNCAO
+	@Pyro5.api.expose
 	def recebe_hb(self, pacote):
 
 		term_lid = prot.le_termo(pacote)
@@ -100,6 +115,7 @@ class Processo:
 		self.tempo_hb = time.time()
 		self.votos = 0
 		return
+	@Pyro5.api.expose
 	def recebe_msg(self, pacote):
 		#msg padrao
 		prot.print_pacote(pacote)
@@ -122,11 +138,13 @@ class Processo:
 				self.commit()
 			#else: 
 				#reporta erro				
+	@Pyro5.api.expose
 	def recebe_pvt(self, pacote):
 		if (self.pesquisa_eleitoral(pacote)):
 			self.tempo_hb = time.time() # tem um caba bom pra mim se elegendo, ent vo me aquietar um tempinho
 			prot.escreve_tipo(pacote, prot.T_VT)
 			self.send_pacote(pacote, self.lista_URIS[prot.le_id_atual(pacote)])
+	@Pyro5.api.expose
 	def recebe_vt(self):
 		self.votos += 1
 		if (self.votos >= (defs.N_PROC) // 2):
@@ -172,6 +190,8 @@ class Processo:
 		link_dns.register(defs.NS_LIDER, defs.URI[self.id])  #se coloca no DNS
 		self.lider = True
 		self.termo += 1
+
+		time.sleep(2)
 
 		thread = threading.Thread(target=self.heart_beat) # 1. Create the thread
 		thread.start() # 2. Start the thread
@@ -232,7 +252,6 @@ class Processo:
 						thread = threading.Thread(target=self.send_pacote, args=(pacote, uri)) # 1. Create the thread
 						thread.start() # 2. Start the thread	
 						
-
 	@Pyro5.api.expose
 	def recebe_texto(self, texto):
 		self.buffer = texto
@@ -242,7 +261,6 @@ class Processo:
 		thread.start() # 2. Start the thread
 
 		return
-
 
 	#baseado na flag muda a main que ta executando
 	def main_seguidor(self):

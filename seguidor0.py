@@ -10,7 +10,7 @@ import processo
 
 ID = defs.P0
 ARQUIVO = 'seg0.txt'
-LIDER = False
+LIDER = True
 SEED = 1235
 
 def main():
