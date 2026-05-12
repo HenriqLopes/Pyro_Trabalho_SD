@@ -38,17 +38,19 @@ class Processo:
 		prot.escreve_tipo(pacote, prot.T_HB)
 		prot.escreve_termo(pacote, self.termo)
 		return pacote
+	
 	def constroi_pacote_pedido_voto(self):
 		pacote = prot.inic_pacote()
 		prot.escreve_tipo(pacote, prot.T_PV)
 		prot.escreve_id_atual(pacote, self.id)
 		prot.escreve_termo(pacote, self.termo)
 		return pacote
+	
 	def constroi_pacote_msg(self, texto):
 		pacote = prot.inic_pacote()
 		prot.escreve_tipo(pacote, prot.T_MS)
 		prot.escreve_id_atual(pacote, self.id_atual)
-		prot.escreve_termo(pacote, self.termo)
+		prot.escreve_termo(pacote, self.termo) # precisa implementar seu uso
 		prot.escreve_texto(pacote, texto)
 		return pacote
 
@@ -88,6 +90,7 @@ class Processo:
 		#adiciona o char passado no buffer não comitado
 		self.buffer = texto
 		self.id_atual  += 1
+		
 	#chamada pelo lider
 	def commit(self):
 		#atualiza o buffer real copiando o não commitado
@@ -114,6 +117,7 @@ class Processo:
 		self.tempo_hb = time.time()
 		self.votos = 0
 		return
+	
 	@Pyro5.api.expose
 	def recebe_msg(self, pacote):
 		#msg padrao
@@ -134,13 +138,15 @@ class Processo:
 				self.add_info(prot.le_texto(pacote))
 				self.commit()
 			#else: 
-				#reporta erro				
+				#reporta erro		
+
 	@Pyro5.api.expose
 	def recebe_pvt(self, pacote):
 		if (self.pesquisa_eleitoral(pacote)):
 			self.tempo_hb = time.time() # tem um caba bom pra mim se elegendo, ent vo me aquietar um tempinho
 			prot.escreve_tipo(pacote, prot.T_VT)
 			self.send_pacote(pacote, self.lista_URIS[prot.le_id_atual(pacote)])
+
 	@Pyro5.api.expose
 	def recebe_vt(self):
 		self.votos += 1
@@ -175,6 +181,7 @@ class Processo:
 		for uri in self.lista_URIS:
 			if (uri != defs.URI[self.id]):
 				self.send_pacote(pacote, uri)	
+
 	#chamada quando alguem pede seu voto
 	def pesquisa_eleitoral(self, pacote):
 		if (self.termo <= prot.le_termo(pacote)):
@@ -182,6 +189,7 @@ class Processo:
 		#else:
 			#self.inicia_eleicao()
 		return False
+	
 	# chamada quando virar o novo lider
 	def registra_como_lider(self):
 		link_dns = Pyro5.api.locate_ns()
@@ -192,11 +200,9 @@ class Processo:
 		if self.termo == 1:
 			time.sleep(6)
 
-		thread = threading.Thread(target=self.heart_beat) # 1. Create the thread
+		thread = threading.Thread(target=self.heart_beat) 
 		thread.start() # 2. Start the thread
 
-	#TODO DESFAZER ESSA FEIURA TODA AQUI, PARA DE SOCAR THREAD ATÈ O CARALHO
-	#@Pyro5.api.oneway
 	@Pyro5.api.expose
 	def recebe_pacote(self, pacote):
 		tipo = prot.le_tipo(pacote)
@@ -228,7 +234,6 @@ class Processo:
 
 	#thread que vai ficar esperando os inputs do cliente
 	def recebe_do_cliente(self, texto):
-
 		pacote = self.constroi_pacote_msg(texto)
 		for uri in self.lista_URIS:
 			if (uri != defs.URI[self.id]):
@@ -237,8 +242,6 @@ class Processo:
 
 	@Pyro5.api.expose
 	def confirma_msg(self, pacote):
-		
-		 
 		if (self.id_atual < prot.le_id_atual(pacote)):
 			self.id_atual = prot.le_id_atual(pacote)
 		print("confirmou")
