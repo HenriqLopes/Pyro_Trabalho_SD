@@ -20,7 +20,7 @@ class Processo:
 		self.candidato = False
 
 		random.seed(seed)
-		self.timer = random.randint(150, 300) / 10
+		self.timer = random.randint(850, 1500) / 100
 		self.tempo_hb = time.time()
 
 		link_dns = Pyro5.api.locate_ns()
@@ -115,21 +115,14 @@ class Processo:
 	@Pyro5.api.expose
 	def recebe_msg(self, pacote):
 		#msg padrao
-		prot.print_pacote(pacote)
 		id_pc = prot.le_id_atual(pacote)
-		print(id_pc)
-		print(prot.le_commit(pacote))
-		if (prot.le_commit(pacote) == 0):
-			print(prot.le_texto(pacote))
-			texto = prot.le_texto(pacote)
-			print(texto)
-			self.buffer = texto
-			self.id_atual  += 1
-			print("aqui")
-			print(self.uri_lid)
-			print("aqui")
+
+		prot.print_pacote(pacote)
+
+		if (prot.le_commit(pacote) == '0'):
+			self.add_info(prot.le_texto(pacote))
 			proxy = Pyro5.api.Proxy(self.uri_lid)
-			proxy.confirma_msg()
+			proxy.confirma_msg(pacote)
 
 		#pediu pra commitar
 		elif (prot.le_commit(pacote) == 1):
@@ -158,7 +151,7 @@ class Processo:
 		lid = self.lider
 		self.candidato = False
 		while (lid == self.lider):
-			#time.sleep(0.1) #s
+			time.sleep(0.01) #s
 
 			if (self.lider):
 				pacote = self.constroi_pacote_hb()
@@ -167,7 +160,8 @@ class Processo:
 						self.send_pacote(pacote, uri)
 						
 			else:
-				#print(f"{(time.time() - self.tempo_hb)}ms de {self.timer}ms")
+				if ((time.time() - self.tempo_hb) > 4):
+					print(f"{(time.time() - self.tempo_hb)}ms de {self.timer}ms")
 				if(self.timer < (time.time() - self.tempo_hb)) and (not(self.candidato)):
 					self.candidato = True
 					self.inicia_eleicao()
@@ -193,7 +187,8 @@ class Processo:
 		self.lider = True
 		self.termo += 1
 
-		time.sleep(10)
+		if self.termo == 1:
+			time.sleep(6)
 
 		thread = threading.Thread(target=self.heart_beat) # 1. Create the thread
 		thread.start() # 2. Start the thread
@@ -240,18 +235,16 @@ class Processo:
 
 	@Pyro5.api.expose
 	def confirma_msg(self, pacote):
-
-		print("chegou aqui porra")
-
 		#n aceita pacotes atrasados
 		if (prot.le_id_atual(pacote) == self.id_atual):
 			self.votos += 1
 			#se der maioria manda commitar (== pra n ficar remandando commit)
 			if (self.votos == (defs.N_PROC) // 2):
-				prot.escreve_commit(pacote, 1)
+				prot.escreve_commit(pacote, '1')
 				for uri in self.lista_URIS:
 					if (uri != defs.URI[self.id]):
-						self.send_pacote(pacote, uri)
+						thread = threading.Thread(target=self.send_pacote, args=(pacote, uri)) # 1. Create the thread
+						thread.start() # 2. Start the thread	
 
 	@Pyro5.api.expose
 	def recebe_texto(self, texto):
