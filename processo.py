@@ -93,6 +93,8 @@ class Processo:
 		#atualiza o buffer real copiando o não commitado
 		with open(self.arquivo, "w", encoding="utf-8") as f:
 			f.write(self.buffer)
+		f.close()
+		
 	#chamada quando  o timer proprio cair, e a eleição me colocar como lider? acho que n sei na real... tem que perguntar se pa
 	def rollback(self):
 		#atualiza o buffer temporario (não commitado) copiando o buffer real
@@ -125,7 +127,7 @@ class Processo:
 			proxy.confirma_msg(pacote)
 
 		#pediu pra commitar
-		elif (prot.le_commit(pacote) == 1):
+		elif (prot.le_commit(pacote) == '1'): # Salvar  os dados que não foram commitados também  ( intermediaris0)
 			if(id_pc == self.id_atual):
 				self.commit()
 			elif (id_pc - self.id_atual == 1): 
@@ -235,11 +237,19 @@ class Processo:
 
 	@Pyro5.api.expose
 	def confirma_msg(self, pacote):
-		#n aceita pacotes atrasados
+		
+		 
+		if (self.id_atual < prot.le_id_atual(pacote)):
+			self.id_atual = prot.le_id_atual(pacote)
+		print("confirmou")
+
 		if (prot.le_id_atual(pacote) == self.id_atual):
 			self.votos += 1
 			#se der maioria manda commitar (== pra n ficar remandando commit)
 			if (self.votos == (defs.N_PROC) // 2):
+				print("mandanso")
+				self.votos = 1
+				self.id_atual+=1
 				prot.escreve_commit(pacote, '1')
 				for uri in self.lista_URIS:
 					if (uri != defs.URI[self.id]):
