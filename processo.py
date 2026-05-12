@@ -20,7 +20,7 @@ class Processo:
 		self.candidato = False
 
 		random.seed(seed)
-		self.timer = random.randint(150, 300) / 100
+		self.timer = random.randint(150, 300) / 10
 		self.tempo_hb = time.time()
 
 		link_dns = Pyro5.api.locate_ns()
@@ -191,7 +191,7 @@ class Processo:
 		self.lider = True
 		self.termo += 1
 
-		time.sleep(2)
+		time.sleep(10)
 
 		thread = threading.Thread(target=self.heart_beat) # 1. Create the thread
 		thread.start() # 2. Start the thread
