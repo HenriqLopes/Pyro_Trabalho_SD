@@ -15,7 +15,6 @@ SEED = 1334
 # IP/AQUELE BAGUI LA DE ASSINATURA de cada um dos processos (isso vai pra um arq separado se pa)
 # TIMER PROPRIO pra valida os hb
 
-
 @Pyro5.api.expose
 class processo:
 	def __init__ (self, id, arquivo, termo, lider):
@@ -37,9 +36,12 @@ class processo:
 			uri_lid = self.link_dns.lookup(defs.NS_LIDER)
 			self.proxy_lider = Pyro5.api.Proxy(uri_lid)
 
-		self.lista_proxys = []
+
+		#TODO NAO PODE FAZER SAPORRA COM AS PROXY, APARENTEMENTE TEM OWNER DE TREAD E N SEI QUE, SO FAZ QUANDO FOR MANDAR
+		self.lista_URIS = []
 		for i in range(defs.N_PROC):
-			self.lista_proxys.append(Pyro5.api.Proxy(defs.URI[i]))
+			self.lista_URIS.append(defs.URI[i])
+			
 
 	def constroi_pacote_hb(self):
 		pacote = prot.inic_pacote()
@@ -100,10 +102,13 @@ class processo:
 				self.commit()
 			#else: 
 				#reporta erro
+				
 	def recebe_pvt(self, pacote):
 		if (self.pesquisa_eleitoral(pacote)):
 			prot.escreve_tipo(pacote, prot.T_VT)
-			self.lista_proxys[prot.le_id_atual(pacote)].recebe_pacote(pacote)
+			proxy = Pyro5.api.Proxy(self.lista_URIS[prot.le_id_atual(pacote)])
+			proxy.recebe_pacote(pacote)
+
 	def recebe_vt(self):
 		self.votos += 1
 		if (self.votos > (defs.N_PROC - self.termo) // 2):
@@ -118,8 +123,9 @@ class processo:
 
 			if (self.lider):
 				pacote = self.constroi_pacote_hb()
-				for s in self.lista_proxys:
-					self.send_pacote(pacote, s)
+				for s in self.lista_URIS:
+					proxy = Pyro5.api.Proxy(s)
+					proxy.send_pacote(pacote)
 			else:
 				if(self.timer < (time.time() - self.tempo_hb)):
 					self.inicia_eleicao()
@@ -127,8 +133,9 @@ class processo:
 	#chamada quando o timer do hb da pau
 	def inicia_eleicao(self):
 		pacote = self.constroi_pacote_pedido_voto()
-		for s in self.lista_proxys:
-			self.send_pacote(pacote, s)
+		for s in self.lista_URIS:
+			proxy = Pyro5.api.Proxy(s)
+			proxy.send_pacote(pacote)
 	#chamada quando alguem pede seu voto
 	def pesquisa_eleitoral(self, pacote):
 		if (self.termo <= prot.le_termo(pacote)):
@@ -174,8 +181,9 @@ class processo:
 	def recebe_do_cliente(self, texto):
 
 		pacote = self.constroi_pacote_msg(texto)
-		for s in self.lista_proxys:
-			self.send_pacote(pacote, s)
+		for s in self.lista_URIS:
+			proxy = Pyro5.api.Proxy(s)
+			proxy.send_pacote(pacote)
 
 	@Pyro5.api.expose
 	def confirma_msg(self, pacote):
@@ -185,8 +193,9 @@ class processo:
 			#se der maioria manda commitar (== pra n ficar remandando commit)
 			if (self.votos == (defs.N_PROC - self.termo) // 2):
 				prot.escreve_commit(pacote, 1)
-				for s in self.lista_proxys:
-					self.send_pacote(pacote, s)
+				for s in self.lista_URIS:
+					proxy = Pyro5.api.Proxy(s)
+					proxy.send_pacote(pacote)
 
 	@Pyro5.api.expose
 	def recebe_texto(self, texto):
@@ -208,7 +217,7 @@ class processo:
 		thread.start() # 2. Start the thread
 
 		# a outra fica recebendo info e commit
-		daemon = Pyro5.api.Daemon(defs.PORTA[ID])             # make a Pyro daemon
+		daemon = Pyro5.api.Daemon(host="localhost", port=defs.PORTA[ID])             # make a Pyro daemon
 		uri = daemon.register(processo, defs.NOMES[ID])
 
 		print("Ready. Object uri =", uri)       # print the uri so we can use it in the client later
@@ -221,7 +230,7 @@ class processo:
 
 		# a outra vai ficar recebendo do cliente e encaminhando pros seguidores
 		# a outra fica recebendo info e commit
-		daemon = Pyro5.api.Daemon(defs.PORTA[ID])             # make a Pyro daemon
+		daemon = Pyro5.api.Daemon(host="localhost", port=defs.PORTA[ID])             # make a Pyro daemon
 		uri = daemon.register(processo, defs.NOMES[ID])
 
 		print("Ready. Object uri =", uri)       # print the uri so we can use it in the client later

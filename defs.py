@@ -21,19 +21,19 @@ NOMES = {
 }
 
 PORTA = {
-	P0 : '45800',
-	P1 : '45801',
-	P2 : '45802',
-	P3 : '45803',
-	LI : '45804'
+	P0 : '57350',
+	P1 : '57351',
+	P2 : '57352',
+	P3 : '57353',
+	LI : '57354'
 }
 
 URI = {
-	P0 : 'PYRO:proc0@localhost:45800',
-	P1 : 'PYRO:proc1@localhost:45801',
-	P2 : 'PYRO:proc2@localhost:45802',
-	P3 : 'PYRO:proc3@localhost:45803',
-	LI : 'PYRO:lider_ini@localhost:45804'
+	P0 : 'PYRO:proc0@localhost:57350',
+	P1 : 'PYRO:proc1@localhost:57351',
+	P2 : 'PYRO:proc2@localhost:57352',
+	P3 : 'PYRO:proc3@localhost:57353',
+	LI : 'PYRO:lider_ini@localhost:57354'
 }
 
 
