@@ -51,7 +51,7 @@ def le_texto(msg):
 	return chars_para_str(msg[INI_BYT_TXT : (INI_BYT_TXT + TAM_BYT_TXT)])
 
 def escreve_termo(msg, termo):
-	msg[INI_BYT_TRM : (INI_BYT_TRM + TAM_BYT_TRM)] = int_para_chars(id, TAM_BYT_TRM)
+	msg[INI_BYT_TRM : (INI_BYT_TRM + TAM_BYT_TRM)] = int_para_chars(termo, TAM_BYT_TRM)
 def le_termo(msg):
 	return chars_para_int(msg[INI_BYT_TRM : (INI_BYT_TRM + TAM_BYT_TRM)])
 
